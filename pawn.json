@@ -1,0 +1,15 @@
+{
+	"user": "pabvlov",
+	"repo": "san-andreas",
+	"tag": "0.0.1",
+	"entry": "gamemodes\\derby.pwn",
+	"output": "gamemodes\\derby.amx",
+	"dependencies": [
+		"openmultiplayer/omp-stdlib",
+		"pBlueG/SA-MP-MySQL"
+	],
+	"local": true,
+	"runtime": {
+		"version": "openmp"
+	}
+}

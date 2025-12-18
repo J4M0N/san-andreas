@@ -1,0 +1,36 @@
+{
+  "announce": false,
+  "enable_query": false,
+  "game": {
+    "allow_interior_weapons": true,
+    "use_entry_exit_markers": true,
+    "use_nametag_los": true,
+    "use_nametags": true,
+    "use_stunt_bonuses": true,
+    "validate_animations": true
+  },
+  "logging": {
+    "enable": true,
+    "log_chat": true,
+    "log_connection_messages": true,
+    "log_deaths": true,
+    "use_prefix": true,
+    "use_timestamp": true
+  },
+  "network": {
+    "allow_037_clients": true,
+    "port": 7777
+  },
+  "pawn": {
+    "legacy_plugins": [
+      "mysql"
+    ],
+    "main_scripts": [
+      "derby"
+    ]
+  },
+  "rcon": {
+    "password": "password"
+  },
+  "use_dyn_ticks": true
+}
