@@ -1,9 +1,9 @@
 /*
-    Sistema de Persistencia de Vehículos
+    Sistema de Persistencia de Vehiculos
     
-    - Guarda la posición del vehículo cada X segundos
-    - Carga vehículos spawneados al conectarse
-    - No duplica vehículos si ya están spawneados
+    - Guarda la posicion del vehiculo al salir o desconectar
+    - Carga vehiculos spawneados al conectarse
+    - No duplica vehiculos si ya estan spawneados
 */
 
 #if defined _vehicle_persistence_included
@@ -11,17 +11,10 @@
 #endif
 #define _vehicle_persistence_included
 
-// Timer para guardar posiciones
-#define VEHICLE_SAVE_INTERVAL 30000 // 30 segundos
-
-new VehicleSaveTimer = -1;
-
 // Inicializar sistema
 stock InitVehiclePersistence()
 {
-    // Timer para guardar posiciones cada 30 segundos
-    VehicleSaveTimer = SetTimer("SaveAllVehiclePositions", VEHICLE_SAVE_INTERVAL, true);
-    printf("[Vehicle Persistence] Sistema iniciado (guardado cada %d segundos)", VEHICLE_SAVE_INTERVAL / 1000);
+    printf("[Vehicle Persistence] Sistema iniciado");
 }
 
 // Guardar todas las posiciones de vehículos spawneados
@@ -208,11 +201,6 @@ stock SavePlayerVehiclesOnDisconnect(playerid)
 // Cerrar sistema (llamar desde OnGameModeExit)
 stock CloseVehiclePersistence()
 {
-    if(VehicleSaveTimer != -1)
-    {
-        KillTimer(VehicleSaveTimer);
-    }
-    
     SaveAllVehiclePositions();
     printf("[Vehicle Persistence] Sistema cerrado - todas las posiciones guardadas");
     return 1;

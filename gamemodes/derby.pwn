@@ -48,6 +48,8 @@
 #define DIALOG_PLAYER_FIND_VEHICLE 1015
 #define DIALOG_PLAYER_STATS 1016
 #define DIALOG_INTERIORS_LIST 1017
+#define DIALOG_BUSINESS_SHOP 1018
+#define DIALOG_BUSINESS_CONFIG 1019
 
 #define MAX_CHARACTERS_PER_USER 3
 
@@ -159,8 +161,9 @@ public OnVehicleDamageStatusUpdate(vehicleid, playerid)
 
 // Includes de sistemas
 #include "../include/character_system.inc"
-#include "../include/property_system.inc"
 #include "../include/inventory_system.inc"
+#include "../include/business_system.inc"
+#include "../include/property_system.inc"
 #include "../include/vehicle_engine_system.inc"
 #include "../include/vehicle_persistence.inc"
 #include "../include/dealership_system.inc"
@@ -196,8 +199,11 @@ public OnGameModeInit()
     
     // Cargar todas las propiedades
     LoadAllProperties();
+    // LoadAllDealerships(); // TODO: Implementar si es necesario
+    InitBusinessSystem();
+    InitVehiclePersistence();
     
-    // Iniciar timer de protección de vehículos
+    // Iniciar timer de proteccion de vehiculos
     SetTimer("CheckVehicleHealth", 1000, true);
     
     return true;
@@ -227,6 +233,8 @@ public OnPlayerConnect(playerid)
     CharacterData[playerid][cID] = 0;
     CharacterData[playerid][cSelected] = false;
     
+    PlayerInBusiness[playerid] = -1;
+    
     GetPlayerName(playerid, UserData[playerid][uNickname], MAX_PLAYER_NAME);
     
     // Verificar si el usuario está registrado
@@ -246,6 +254,9 @@ public OnPlayerDisconnect(playerid, reason)
     {
         SaveCharacterData(playerid);
     }
+    
+    // Resetear estado de tienda
+    PlayerInBusiness[playerid] = -1;
     
     new string[128];
     
@@ -338,7 +349,7 @@ public OnPlayerKeyStateChange(playerid, KEY:newkeys, KEY:oldkeys)
         return 1;
     }
     
-    // Tecla H - Entrar/Salir de propiedades (KEY_CTRL_BACK)
+    // Tecla H - Entrar/Salir de propiedades y tiendas (KEY_CTRL_BACK)
     if((newkeys & KEY_CTRL_BACK) && !(oldkeys & KEY_CTRL_BACK))
     {
         if(CharacterData[playerid][cSelected])
@@ -348,13 +359,27 @@ public OnPlayerKeyStateChange(playerid, KEY:newkeys, KEY:oldkeys)
             {
                 ExitProperty(playerid);
             }
+            // Si está dentro de una tienda, salir
+            else if(PlayerInBusiness[playerid] != -1)
+            {
+                ExitBusiness(playerid);
+            }
             else
             {
-                // Si está fuera, intentar entrar a la más cercana
+                // Si está fuera, intentar entrar a la propiedad más cercana
                 new propertySlot = GetNearestProperty(playerid);
                 if(propertySlot != -1)
                 {
                     EnterProperty(playerid, propertySlot);
+                }
+                else
+                {
+                    // Si no hay propiedad, intentar entrar a una tienda
+                    new businessSlot = GetNearbyBusiness(playerid, 3.0);
+                    if(businessSlot != -1)
+                    {
+                        EnterBusiness(playerid, businessSlot);
+                    }
                 }
             }
         }
@@ -438,6 +463,11 @@ public OnPlayerCommandText(playerid, cmdtext[])
     if(strcmp(cmd, "/buscarvehiculo", true) == 0) return cmd_buscarvehiculo(playerid, cmdtext[idx]);
     if(strcmp(cmd, "/buscarcarro", true) == 0) return cmd_buscarcarro(playerid, cmdtext[idx]);
     if(strcmp(cmd, "/buscarauto", true) == 0) return cmd_buscarauto(playerid, cmdtext[idx]);
+    if(strcmp(cmd, "/creartienda", true) == 0) return cmd_creartienda(playerid, cmdtext[idx]);
+    if(strcmp(cmd, "/configurarbusiness", true) == 0) return cmd_configurarbusiness(playerid, cmdtext[idx]);
+    if(strcmp(cmd, "/setinteriorpos", true) == 0) return cmd_setinteriorpos(playerid, cmdtext[idx]);
+    if(strcmp(cmd, "/agregarstock", true) == 0) return cmd_agregarstock(playerid, cmdtext[idx]);
+    if(strcmp(cmd, "/comprar", true) == 0) return cmd_comprar(playerid, cmdtext[idx]);
     
     return 0; // Comando no encontrado
 }
@@ -480,6 +510,19 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
     // Dialog de inventario
     if(dialogid == DIALOG_INVENTORY)
         return OnDialogInventory(playerid, response, listitem);
+    
+    // Dialog de negocios
+    if(dialogid == DIALOG_BUSINESS_SHOP)
+        return OnDialogBusinessShop(playerid, response, listitem);
+    
+    if(dialogid == DIALOG_BUSINESS_CONFIG)
+        return OnDialogBusinessConfig(playerid, response, listitem);
+    
+    if(dialogid == DIALOG_BUSINESS_CONFIG + 1)
+        return OnDialogBusinessCfgInteriorID(playerid, response, inputtext);
+    
+    if(dialogid == DIALOG_BUSINESS_CONFIG + 2)
+        return 1;
     
     if(dialogid == DIALOG_PLAYER_FIND_VEHICLE)
     {

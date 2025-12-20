@@ -489,13 +489,22 @@ stock FormatNumber(number)
 // COMANDOS DE JUGADORES - PROPIEDADES
 // ============================================================================
 
-// Entrar a una propiedad
+// Entrar a una propiedad o tienda
 CMD:enter(playerid, params[])
 {
     new propertySlot = GetNearestProperty(playerid);
     
     if(propertySlot == -1)
-        return SendClientMessage(playerid, COLOR_ERROR, "No estás cerca de ninguna propiedad.");
+    {
+        // Si no hay propiedad cerca, verificar si hay tienda
+        new businessSlot = GetNearbyBusiness(playerid, 3.0);
+        if(businessSlot != -1)
+        {
+            EnterBusiness(playerid, businessSlot);
+            return 1;
+        }
+        return SendClientMessage(playerid, COLOR_ERROR, "No estás cerca de ninguna propiedad o tienda.");
+    }
     
     // Verificar si está cerrada
     if(PropertyData[propertySlot][pLocked])
@@ -961,5 +970,13 @@ CMD:entrar(playerid, params[])
 
 CMD:salir(playerid, params[])
 {
+    // Verificar si está en una tienda
+    if(PlayerInBusiness[playerid] != -1)
+    {
+        ExitBusiness(playerid);
+        return 1;
+    }
+    
+    // Si no, usar comando de propiedad
     return cmd_entrar(playerid, params);
 }
