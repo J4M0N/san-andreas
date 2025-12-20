@@ -23,7 +23,9 @@
   },
   "pawn": {
     "legacy_plugins": [
-      "mysql"
+      "mysql",
+      "streamer",
+      "sscanf"
     ],
     "main_scripts": [
       "derby"

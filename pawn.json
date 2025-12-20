@@ -6,7 +6,9 @@
 	"output": "gamemodes\\derby.amx",
 	"dependencies": [
 		"openmultiplayer/omp-stdlib",
-		"pBlueG/SA-MP-MySQL"
+		"pBlueG/SA-MP-MySQL",
+		"samp-incognito/samp-streamer-plugin",
+		"Y-Less/sscanf"
 	],
 	"local": true,
 	"runtime": {

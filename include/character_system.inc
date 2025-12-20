@@ -88,7 +88,26 @@ public OnLoadCharacterList(playerid)
 forward OnCharacterCreate(playerid);
 public OnCharacterCreate(playerid)
 {
-    CharacterData[playerid][cID] = cache_insert_id();
+    printf("[DEBUG] OnCharacterCreate llamada para playerid: %d", playerid);
+    
+    if(!IsPlayerConnected(playerid))
+    {
+        printf("[DEBUG] ERROR: Jugador %d no esta conectado!", playerid);
+        return false;
+    }
+    
+    new insertid = cache_insert_id();
+    printf("[DEBUG] cache_insert_id() = %d", insertid);
+    
+    if(insertid == 0)
+    {
+        printf("[DEBUG] ERROR: INSERT falló, insert_id = 0");
+        printf("[DEBUG] MySQL errno: %d", mysql_errno(g_MySQL));
+        SendClientMessage(playerid, COLOR_ERROR, "Error al crear el personaje en la base de datos.");
+        return false;
+    }
+    
+    CharacterData[playerid][cID] = insertid;
     CharacterData[playerid][cUserID] = UserData[playerid][uID];
     CharacterData[playerid][cMoney] = 5000;
     CharacterData[playerid][cBank] = 10000;
@@ -100,14 +119,25 @@ public OnCharacterCreate(playerid)
     CharacterData[playerid][cVirtualWorld] = 0;
     CharacterData[playerid][cHealth] = 100.0;
     CharacterData[playerid][cArmour] = 0.0;
-    CharacterData[playerid][cSkin] = 0;
     CharacterData[playerid][cSelected] = true;
+    
+    printf("[DEBUG] Personaje creado con ID %d, skin %d", insertid, CharacterData[playerid][cSkin]);
     
     new string[128];
     format(string, sizeof(string), "{00FF00}%s{FFFFFF} ha creado el personaje {FFFF00}%s", UserData[playerid][uNickname], CharacterData[playerid][cName]);
     SendClientMessageToAll(COLOR_WHITE, string);
     
+    SetSpawnInfo(playerid, 0, CharacterData[playerid][cSkin], 
+        CharacterData[playerid][cPosX], CharacterData[playerid][cPosY], CharacterData[playerid][cPosZ], 
+        CharacterData[playerid][cPosA], WEAPON_FIST, 0, WEAPON_FIST, 0, WEAPON_FIST, 0);
+    
+    printf("[DEBUG] SetSpawnInfo configurado, spawneando jugador...");
+    
+    TogglePlayerSpectating(playerid, false);
     SpawnPlayer(playerid);
+    
+    printf("[DEBUG] SpawnPlayer ejecutado exitosamente");
+    
     return true;
 }
 
@@ -132,6 +162,8 @@ LoadCharacterData(playerid)
     cache_get_value_name_int(0, "id", CharacterData[playerid][cID]);
     cache_get_value_name_int(0, "user_id", CharacterData[playerid][cUserID]);
     cache_get_value_name(0, "name", CharacterData[playerid][cName], MAX_PLAYER_NAME);
+    cache_get_value_name_int(0, "age", CharacterData[playerid][cAge]);
+    cache_get_value_name_int(0, "gender", CharacterData[playerid][cGender]);
     cache_get_value_name_int(0, "money", CharacterData[playerid][cMoney]);
     cache_get_value_name_int(0, "bank", CharacterData[playerid][cBank]);
     cache_get_value_name_float(0, "pos_x", CharacterData[playerid][cPosX]);
@@ -228,6 +260,46 @@ ShowCharacterCreate(playerid)
         {FFFFFF}Formato: {FFFF00}Nombre Apellido"
     );
     ShowPlayerDialog(playerid, DIALOG_CHARACTER_CREATE, DIALOG_STYLE_INPUT, "Crear Personaje", string, "Crear", "Cancelar");
+}
+
+ShowCharacterStatsDialog(playerid)
+{
+    new string[512];
+    new ageStr[32], genderStr[32], skinStr[32];
+    
+    // Edad
+    if(CharacterData[playerid][cAge] == 0)
+        format(ageStr, sizeof(ageStr), "{FF0000}No configurado");
+    else
+        format(ageStr, sizeof(ageStr), "{00FF00}%d a\xF1os", CharacterData[playerid][cAge]);
+    
+    // Genero
+    if(CharacterData[playerid][cGender] == 0)
+        format(genderStr, sizeof(genderStr), "{FF0000}No configurado");
+    else if(CharacterData[playerid][cGender] == 1)
+        format(genderStr, sizeof(genderStr), "{00FF00}Masculino");
+    else
+        format(genderStr, sizeof(genderStr), "{00FF00}Femenino");
+    
+    // Skin
+    if(CharacterData[playerid][cSkin] == 0)
+        format(skinStr, sizeof(skinStr), "{FF0000}No configurado (0 - CJ)");
+    else
+        format(skinStr, sizeof(skinStr), "{00FF00}ID: %d", CharacterData[playerid][cSkin]);
+    
+    new dialogTitle[128];
+    format(dialogTitle, sizeof(dialogTitle), "Configuracion: %s", CharacterData[playerid][cName]);
+    
+    format(string, sizeof(string),
+        "Edad\t%s\n\
+        Genero\t%s\n\
+        Skin\t%s\n\
+        {00FF00}Finalizar creacion",
+        ageStr, genderStr, skinStr
+    );
+    
+    ShowPlayerDialog(playerid, DIALOG_CHARACTER_STATS, DIALOG_STYLE_TABLIST,
+        dialogTitle, string, "Seleccionar", "Atras");
 }
 
 // Validar nombre RP (Nombre_Apellido)
