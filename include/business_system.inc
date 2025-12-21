@@ -38,6 +38,7 @@ enum E_BUSINESS_DATA
     Float:bInteriorZ,
     bInterior,
     bVirtualWorld,
+    bPickupIcon,          // ID del icono del pickup
     bPickup,
     Text3D:bLabel,
     bInteriorPickup,      // Pickup del punto de venta interior
@@ -58,9 +59,9 @@ stock InitBusinessSystem()
 // Cargar todos los negocios
 stock LoadAllBusinesses()
 {
-    new query[384];
+    new query[512];
     mysql_format(g_MySQL, query, sizeof(query),
-        "SELECT id, shop_category, name, pos_x, pos_y, pos_z, interior_x, interior_y, interior_z, interior, virtual_world \
+        "SELECT id, shop_category, name, pos_x, pos_y, pos_z, interior_x, interior_y, interior_z, interior, virtual_world, COALESCE(pickup_icon, 1274) as pickup_icon \
         FROM shops WHERE pos_x IS NOT NULL ORDER BY id ASC LIMIT %d",
         MAX_BUSINESSES);
     
@@ -72,6 +73,8 @@ public OnLoadBusinesses()
 {
     BusinessCount = 0;
     new rows = cache_num_rows();
+    
+    printf("[DEBUG LoadAllBusinesses] Cargando %d negocios", rows);
     
     for(new i = 0; i < rows && i < MAX_BUSINESSES; i++)
     {
@@ -95,6 +98,11 @@ public OnLoadBusinesses()
         cache_get_value_name_float(i, "interior_z", BusinessData[i][bInteriorZ]);
         cache_get_value_name_int(i, "interior", BusinessData[i][bInterior]);
         cache_get_value_name_int(i, "virtual_world", BusinessData[i][bVirtualWorld]);
+        cache_get_value_name_int(i, "pickup_icon", BusinessData[i][bPickupIcon]);
+        
+        printf("[DEBUG LoadAllBusinesses] Slot %d: ID=%d, Name=%s, Interior=%d, Icon=%d, Pos=(%.2f,%.2f,%.2f)", 
+            i, BusinessData[i][bID], BusinessData[i][bName], BusinessData[i][bInterior], BusinessData[i][bPickupIcon],
+            BusinessData[i][bPosX], BusinessData[i][bPosY], BusinessData[i][bPosZ]);
         
         // Inicializar pickups
         BusinessData[i][bPickup] = -1;
@@ -118,20 +126,23 @@ stock CreateBusinessPickup(idx)
     if(IsValidDynamic3DTextLabel(BusinessData[idx][bLabel]))
         DestroyDynamic3DTextLabel(BusinessData[idx][bLabel]);
     
-    // Crear nuevo pickup basado en el tipo
-    new modelid;
-    switch(BusinessData[idx][bType])
+    // Usar icono personalizado o por defecto según tipo
+    new modelid = BusinessData[idx][bPickupIcon];
+    if(modelid == 0) // Si no tiene icono configurado, usar por defecto según tipo
     {
-        case BUSINESS_24_7: modelid = 1239; // Icono de shopping
-        case BUSINESS_GUNSHOP: modelid = 1313; // Icono de arma
-        case BUSINESS_CLOTHES: modelid = 1275; // Icono de ropa
-        case BUSINESS_RESTAURANT: modelid = 1582; // Icono de comida
-        default: modelid = 1239;
+        switch(BusinessData[idx][bType])
+        {
+            case BUSINESS_24_7: modelid = 1239; // Icono de shopping
+            case BUSINESS_GUNSHOP: modelid = 1242; // Icono de arma
+            case BUSINESS_CLOTHES: modelid = 1275; // Icono de ropa
+            case BUSINESS_RESTAURANT: modelid = 1272; // Icono de comida
+            default: modelid = 1274;
+        }
     }
     
     BusinessData[idx][bPickup] = CreateDynamicPickup(modelid, 1, 
         BusinessData[idx][bPosX], BusinessData[idx][bPosY], BusinessData[idx][bPosZ],
-        BusinessData[idx][bVirtualWorld], BusinessData[idx][bInterior]);
+        0, 0); // Siempre en VW 0, Interior 0 para entrada exterior
     
     // Crear label
     new labelText[256];
@@ -181,16 +192,28 @@ stock GetNearbyBusiness(playerid, Float:range = BUSINESS_PICKUP_RANGE)
     new interior = GetPlayerInterior(playerid);
     new vw = GetPlayerVirtualWorld(playerid);
     
+    printf("[DEBUG GetNearbyBusiness] Jugador pos: %.2f, %.2f, %.2f | Int: %d | VW: %d", x, y, z, interior, vw);
+    printf("[DEBUG GetNearbyBusiness] BusinessCount: %d", BusinessCount);
+    
     for(new i = 0; i < BusinessCount; i++)
     {
         if(BusinessData[i][bID] == 0) continue;
         
-        // Verificar punto de venta exterior
+        printf("[DEBUG GetNearbyBusiness] Checking slot %d (ID: %d)", i, BusinessData[i][bID]);
+        printf("[DEBUG GetNearbyBusiness] - Pos entrada: %.2f, %.2f, %.2f", 
+            BusinessData[i][bPosX], BusinessData[i][bPosY], BusinessData[i][bPosZ]);
+        
+        // Verificar punto de entrada exterior (siempre en int 0, vw 0)
         if(IsPlayerInRangeOfPoint(playerid, range, 
             BusinessData[i][bPosX], BusinessData[i][bPosY], BusinessData[i][bPosZ]))
         {
-            if(interior == BusinessData[i][bInterior] && vw == BusinessData[i][bVirtualWorld])
+            printf("[DEBUG GetNearbyBusiness] - En rango de entrada exterior!");
+            printf("[DEBUG GetNearbyBusiness] - Player int/vw: %d/%d, Business int/vw exterior: 0/0", interior, vw);
+            
+            // La entrada siempre está en interior 0, virtual world 0
+            if(interior == 0 && vw == 0)
             {
+                printf("[DEBUG GetNearbyBusiness] - MATCH! Retornando slot %d", i);
                 return i;
             }
         }
@@ -198,17 +221,24 @@ stock GetNearbyBusiness(playerid, Float:range = BUSINESS_PICKUP_RANGE)
         // Verificar punto de venta interior (si está configurado)
         if(BusinessData[i][bInteriorX] != 0.0 || BusinessData[i][bInteriorY] != 0.0)
         {
+            printf("[DEBUG GetNearbyBusiness] - Pos interior: %.2f, %.2f, %.2f (Int: %d)", 
+                BusinessData[i][bInteriorX], BusinessData[i][bInteriorY], BusinessData[i][bInteriorZ],
+                BusinessData[i][bInterior]);
+            
             if(IsPlayerInRangeOfPoint(playerid, range,
                 BusinessData[i][bInteriorX], BusinessData[i][bInteriorY], BusinessData[i][bInteriorZ]))
             {
+                printf("[DEBUG GetNearbyBusiness] - En rango de punto interior!");
                 if(interior == BusinessData[i][bInterior] && vw == BusinessData[i][bVirtualWorld])
                 {
+                    printf("[DEBUG GetNearbyBusiness] - MATCH interior! Retornando slot %d", i);
                     return i;
                 }
             }
         }
     }
     
+    printf("[DEBUG GetNearbyBusiness] - No se encontro negocio cercano");
     return -1;
 }
 
@@ -220,6 +250,16 @@ stock EnterBusiness(playerid, businessSlot)
     
     if(BusinessData[businessSlot][bID] == 0)
         return 0;
+    
+    // Debug: Mostrar todos los datos del negocio
+    printf("[Business DEBUG] ===== DATOS DEL NEGOCIO =====");
+    printf("[Business DEBUG] Slot: %d, ID: %d, Nombre: %s", businessSlot, BusinessData[businessSlot][bID], BusinessData[businessSlot][bName]);
+    printf("[Business DEBUG] Tipo: %d", BusinessData[businessSlot][bType]);
+    printf("[Business DEBUG] Pos Entrada: %.2f, %.2f, %.2f", BusinessData[businessSlot][bPosX], BusinessData[businessSlot][bPosY], BusinessData[businessSlot][bPosZ]);
+    printf("[Business DEBUG] Pos Interior: %.2f, %.2f, %.2f", BusinessData[businessSlot][bInteriorX], BusinessData[businessSlot][bInteriorY], BusinessData[businessSlot][bInteriorZ]);
+    printf("[Business DEBUG] Interior ID: %d", BusinessData[businessSlot][bInterior]);
+    printf("[Business DEBUG] Virtual World: %d", BusinessData[businessSlot][bVirtualWorld]);
+    printf("[Business DEBUG] ==============================");
     
     // Verificar si tiene interior configurado
     if(BusinessData[businessSlot][bInterior] == 0)
@@ -464,6 +504,7 @@ CMD:configurarbusiness(playerid, params[])
         "Setear Interior ID\n\
         Setear Posicion Interior\n\
         Setear Posicion Entrada\n\
+        Cambiar Icono Pickup\n\
         Abrir/Cerrar Tienda\n\
         Ver Informacion");
     
@@ -494,7 +535,8 @@ stock OnDialogBusinessConfig(playerid, response, listitem)
                 {FFFF00}Ejemplos:\n\
                 {FFFFFF}0 = Exterior\n\
                 6 = Interior 24/7\n\
-                1 = Interior Ammunation");
+                1 = Interior Ammunation",
+                businessid);
             
             ShowPlayerDialog(playerid, DIALOG_BUSINESS_CONFIG + 1, DIALOG_STYLE_INPUT,
                 "Setear Interior ID", string, "Confirmar", "Volver");
@@ -537,7 +579,23 @@ stock OnDialogBusinessConfig(playerid, response, listitem)
             
             DeletePVar(playerid, "ConfigBusinessID");
         }
-        case 3: // Abrir/Cerrar Tienda
+        case 3: // Cambiar Icono Pickup
+        {
+            new iconstring[512];
+            format(iconstring, sizeof(iconstring),
+                "{FFFFFF}Selecciona el icono para el negocio:\\n\\n\\\
+                {FFFF00}Iconos comunes:\\n\\\
+                {FFFFFF}1274 - Icono generico tienda\\n\\\
+                1239 - 24/7 (tienda)\\n\\\
+                1242 - Ammunation\\n\\\
+                1275 - Ropa\\n\\\
+                1559 - Ferreteria\\n\\n\\\
+                {AAAAAA}Ingresa el ID del icono (1000-1999):\");
+            
+            ShowPlayerDialog(playerid, DIALOG_BUSINESS_CONFIG + 3, DIALOG_STYLE_INPUT,
+                "Cambiar Icono Pickup", iconstring, "Confirmar", "Volver");
+        }
+        case 4: // Abrir/Cerrar Tienda
         {
             // Buscar el property_id de esta shop
             new query[256];
@@ -550,7 +608,7 @@ stock OnDialogBusinessConfig(playerid, response, listitem)
             SendClientMessage(playerid, COLOR_INFO, "{FFFF00}Cambiando estado de la tienda...");
             DeletePVar(playerid, "ConfigBusinessID");
         }
-        case 4: // Ver Informacion
+        case 5: // Ver Informacion
         {
             new idx = -1;
             for(new i = 0; i < BusinessCount; i++)
@@ -625,11 +683,60 @@ stock OnDialogBusinessCfgInteriorID(playerid, response, const inputtext[])
         "UPDATE shops SET interior = %d WHERE id = %d",
         interiorid, businessid);
     
+    mysql_tquery(g_MySQL, query, "OnBusinessInteriorUpdated", "ddd", playerid, businessid, interiorid);
+    
+    SendClientMessage(playerid, COLOR_INFO, "{FFFF00}Actualizando interior...");
+    return 1;
+}
+
+forward OnBusinessInteriorUpdated(playerid, businessid, interiorid);
+public OnBusinessInteriorUpdated(playerid, businessid, interiorid)
+{
+    DeletePVar(playerid, "ConfigBusinessID");
+    
+    // Recargar negocios
+    LoadAllBusinesses();
+    
+    new string[128];
+    format(string, sizeof(string), "{00FF00}Interior ID actualizado a: {FFFFFF}%d - Negocios recargados", interiorid);
+    SendClientMessage(playerid, COLOR_SUCCESS, string);
+    SendClientMessage(playerid, COLOR_INFO, "{FFFFFF}Ya puedes usar {FFFF00}/enter {FFFFFF}para entrar a la tienda");
+    
+    printf("[Business] Interior actualizado: Business %d -> Interior %d", businessid, interiorid);
+    return 1;
+}
+
+// Handler para cambiar icono del pickup
+stock OnDialogBusinessCfgIcon(playerid, response, const inputtext[])
+{
+    new businessid = GetPVarInt(playerid, "ConfigBusinessID");
+    
+    if(!response)
+    {
+        DeletePVar(playerid, "ConfigBusinessID");
+        return 1;
+    }
+    
+    new iconid = strval(inputtext);
+    
+    if(iconid < 1000 || iconid > 1999)
+    {
+        SendClientMessage(playerid, COLOR_ERROR, "{FF0000}ID de icono invalido (1000-1999)");
+        DeletePVar(playerid, "ConfigBusinessID");
+        return 1;
+    }
+    
+    // Actualizar icon_id en la base de datos
+    new query[256];
+    mysql_format(g_MySQL, query, sizeof(query),
+        "UPDATE shops SET pickup_icon = %d WHERE id = %d",
+        iconid, businessid);
+    
     mysql_tquery(g_MySQL, query);
     LoadAllBusinesses();
     
     new string[128];
-    format(string, sizeof(string), "{00FF00}Interior ID actualizado a: {FFFFFF}%d", interiorid);
+    format(string, sizeof(string), "{00FF00}Icono actualizado a ID: {FFFFFF}%d", iconid);
     SendClientMessage(playerid, COLOR_SUCCESS, string);
     
     DeletePVar(playerid, "ConfigBusinessID");

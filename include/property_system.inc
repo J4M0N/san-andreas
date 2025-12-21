@@ -494,10 +494,14 @@ CMD:enter(playerid, params[])
 {
     new propertySlot = GetNearestProperty(playerid);
     
+    printf("[DEBUG /enter] PropertySlot: %d", propertySlot);
+    
     if(propertySlot == -1)
     {
         // Si no hay propiedad cerca, verificar si hay tienda
         new businessSlot = GetNearbyBusiness(playerid, 3.0);
+        printf("[DEBUG /enter] No property, BusinessSlot: %d", businessSlot);
+        
         if(businessSlot != -1)
         {
             EnterBusiness(playerid, businessSlot);
@@ -505,6 +509,8 @@ CMD:enter(playerid, params[])
         }
         return SendClientMessage(playerid, COLOR_ERROR, "No estás cerca de ninguna propiedad o tienda.");
     }
+    
+    printf("[DEBUG /enter] Found property, checking if locked...");
     
     // Verificar si está cerrada
     if(PropertyData[propertySlot][pLocked])

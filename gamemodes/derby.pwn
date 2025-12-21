@@ -203,6 +203,9 @@ public OnGameModeInit()
     InitBusinessSystem();
     InitVehiclePersistence();
     
+    // Remover pickups originales de tiendas del SA-MP
+    RemoveOriginalSAMPPickups();
+    
     // Iniciar timer de proteccion de vehiculos
     SetTimer("CheckVehicleHealth", 1000, true);
     
@@ -352,36 +355,59 @@ public OnPlayerKeyStateChange(playerid, KEY:newkeys, KEY:oldkeys)
     // Tecla H - Entrar/Salir de propiedades y tiendas (KEY_CTRL_BACK)
     if((newkeys & KEY_CTRL_BACK) && !(oldkeys & KEY_CTRL_BACK))
     {
+        printf("[DEBUG H] Tecla H presionada por %s", CharacterData[playerid][cName]);
+        
         if(CharacterData[playerid][cSelected])
         {
+            printf("[DEBUG H] Personaje seleccionado OK");
+            
             // Si está dentro de una propiedad, salir
             if(PlayerInProperty[playerid] != -1)
             {
+                printf("[DEBUG H] PlayerInProperty: %d - Ejecutando ExitProperty", PlayerInProperty[playerid]);
                 ExitProperty(playerid);
             }
             // Si está dentro de una tienda, salir
             else if(PlayerInBusiness[playerid] != -1)
             {
+                printf("[DEBUG H] PlayerInBusiness: %d - Ejecutando ExitBusiness", PlayerInBusiness[playerid]);
                 ExitBusiness(playerid);
             }
             else
             {
-                // Si está fuera, intentar entrar a la propiedad más cercana
-                new propertySlot = GetNearestProperty(playerid);
-                if(propertySlot != -1)
+                printf("[DEBUG H] Jugador fuera, buscando entrada cercana");
+                
+                // Primero intentar entrar a una tienda
+                new businessSlot = GetNearbyBusiness(playerid, 3.0);
+                printf("[DEBUG H] BusinessSlot encontrado: %d", businessSlot);
+                
+                if(businessSlot != -1)
                 {
-                    EnterProperty(playerid, propertySlot);
+                    printf("[DEBUG H] Intentando entrar a tienda slot %d", businessSlot);
+                    EnterBusiness(playerid, businessSlot);
                 }
                 else
                 {
-                    // Si no hay propiedad, intentar entrar a una tienda
-                    new businessSlot = GetNearbyBusiness(playerid, 3.0);
-                    if(businessSlot != -1)
+                    // Si no hay tienda, intentar entrar a propiedad
+                    new propertySlot = GetNearestProperty(playerid);
+                    printf("[DEBUG H] PropertySlot encontrado: %d", propertySlot);
+                    
+                    if(propertySlot != -1)
                     {
-                        EnterBusiness(playerid, businessSlot);
+                        printf("[DEBUG H] Intentando entrar a propiedad slot %d", propertySlot);
+                        EnterProperty(playerid, propertySlot);
+                    }
+                    else
+                    {
+                        printf("[DEBUG H] No hay propiedad ni tienda cercana");
+                        SendClientMessage(playerid, COLOR_ERROR, "No hay ninguna entrada cercana.");
                     }
                 }
             }
+        }
+        else
+        {
+            printf("[DEBUG H] Personaje NO seleccionado");
         }
         return 1;
     }
@@ -468,6 +494,7 @@ public OnPlayerCommandText(playerid, cmdtext[])
     if(strcmp(cmd, "/setinteriorpos", true) == 0) return cmd_setinteriorpos(playerid, cmdtext[idx]);
     if(strcmp(cmd, "/agregarstock", true) == 0) return cmd_agregarstock(playerid, cmdtext[idx]);
     if(strcmp(cmd, "/comprar", true) == 0) return cmd_comprar(playerid, cmdtext[idx]);
+    if(strcmp(cmd, "/interiores", true) == 0 || strcmp(cmd, "/int", true) == 0) return cmd_interiores(playerid, cmdtext[idx]);
     
     return 0; // Comando no encontrado
 }
@@ -487,6 +514,20 @@ stock strtok(const string[], &index)
     }
     result[index - offset] = EOS;
     return result;
+}
+
+// Función para remover pickups originales de SA-MP
+stock RemoveOriginalSAMPPickups()
+{
+    // Remover pickups de tiendas 24/7, Ammunation, ropa, etc.
+    RemoveBuildingForPlayer(0, 1239, 0.0, 0.0, 0.0, 6000.0); // 24/7
+    RemoveBuildingForPlayer(0, 1242, 0.0, 0.0, 0.0, 6000.0); // Ammunation
+    RemoveBuildingForPlayer(0, 1275, 0.0, 0.0, 0.0, 6000.0); // Ropa
+    RemoveBuildingForPlayer(0, 1272, 0.0, 0.0, 0.0, 6000.0); // Comida
+    RemoveBuildingForPlayer(0, 1274, 0.0, 0.0, 0.0, 6000.0); // Generico
+    
+    print("[Server] Pickups originales de SA-MP removidos");
+    return 1;
 }
 
 public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
@@ -523,6 +564,9 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
     
     if(dialogid == DIALOG_BUSINESS_CONFIG + 2)
         return 1;
+    
+    if(dialogid == DIALOG_BUSINESS_CONFIG + 3)
+        return OnDialogBusinessCfgIcon(playerid, response, inputtext);
     
     if(dialogid == DIALOG_PLAYER_FIND_VEHICLE)
     {

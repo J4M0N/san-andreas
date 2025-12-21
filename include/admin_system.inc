@@ -572,13 +572,18 @@ public OnPlayerMarkVehicle(playerid)
 }
 
 // Comando para teleportarse a interiores
-CMD:interior(playerid, params[])
+CMD:interiores(playerid, params[])
 {
+    printf("[DEBUG /interior] Comando ejecutado por %s (Admin: %d)", CharacterData[playerid][cName], UserData[playerid][uAdminLevel]);
+    
     if(!IsHelper(playerid))
     {
+        printf("[DEBUG /interior] Sin permisos - AdminLevel: %d", UserData[playerid][uAdminLevel]);
         SendClientMessage(playerid, COLOR_ERROR, "{FF0000}[ERROR]{FFFFFF} No tienes permisos para usar este comando.");
         return 1;
     }
+    
+    printf("[DEBUG /interior] Permisos OK - Mostrando dialog");
     
     new string[2048];
     strcat(string, "24/7 Shop 1\n24/7 Shop 2\n24/7 Shop 3\n24/7 Shop 4\n24/7 Shop 5\n24/7 Shop 6\n");
@@ -594,6 +599,7 @@ CMD:interior(playerid, params[])
     strcat(string, "Barbara's Bedroom\nMichelle's Bedroom\nMillie's Bedroom\n");
     
     ShowPlayerDialog(playerid, DIALOG_INTERIORS_LIST, DIALOG_STYLE_LIST, "Teleport a Interiores", string, "Ir", "Cancelar");
+    printf("[DEBUG /interior] Dialog mostrado - ID: %d", DIALOG_INTERIORS_LIST);
     return 1;
 }
 
@@ -664,7 +670,7 @@ CMD:setvw(playerid, params[])
 // Comando alias
 CMD:setinterior(playerid, params[]) return cmd_setint(playerid, params);
 CMD:setworld(playerid, params[]) return cmd_setvw(playerid, params);
-CMD:int(playerid, params[]) return cmd_interior(playerid, params);
+CMD:int(playerid, params[]) return cmd_interiores(playerid, params);
 
 // Comando para buscar qué propiedades usan un interior o virtual world
 CMD:checkint(playerid, params[])
