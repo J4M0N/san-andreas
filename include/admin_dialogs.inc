@@ -256,7 +256,7 @@ stock OnDialogAdminPanelBan(playerid, response, inputtext[])
 }
 
 // Handler para baneo - Paso 2: Tiempo
-stock OnDialogAdminPanelBanTime(playerid, response, inputtext[])
+stock OnDialogAdminPanelBanTime(playerid, response, const inputtext[])
 {
     if(!response) return 1;
     
@@ -501,7 +501,7 @@ stock OnDialogAdminDarMoney(playerid, response, listitem)
     return 1;
 }
 
-stock OnDialogAdminDarSkin(playerid, response, inputtext[])
+stock OnDialogAdminDarSkin(playerid, response, const inputtext[])
 {
     if(!response) return 1;
     
@@ -657,8 +657,9 @@ stock OnDialogAdminDarVehicleSearch(playerid, response, inputtext[])
 }
 
 // Handler para selección de vehículo desde búsqueda
-stock OnDialogAdminDarVehicleSearchResult(playerid, response, listitem, inputtext[])
+stock OnDialogAdminDarVehSearch(playerid, response, listitem, const inputtext[])
 {
+    #pragma unused listitem, inputtext
     if(!response) return 1;
     
     new targetid = AdminDarTarget[playerid];

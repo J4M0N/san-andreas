@@ -619,7 +619,7 @@ public OnDialogResponse(playerid, dialogid, response, listitem, inputtext[])
     if(dialogid == DIALOG_ADMIN_DAR_VEHICLE + 1)
         return OnDialogAdminDarVehicleSearch(playerid, response, inputtext);
     if(dialogid == DIALOG_ADMIN_DAR_VEHICLE + 2)
-        return OnDialogAdminDarVehicleSearchResult(playerid, response, listitem, inputtext);
+        return OnDialogAdminDarVehSearch(playerid, response, listitem, inputtext);
     
     // Dialog de inventario
     if(dialogid == DIALOG_INVENTORY)
