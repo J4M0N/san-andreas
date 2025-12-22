@@ -1023,6 +1023,7 @@ public OnCheckVirtualWorldUsage(playerid, virtualworld)
     return 1;
 }
 <<<<<<< HEAD
+<<<<<<< HEAD
 // ============================================================================
 // COMANDOS DE ARMAS
 // ============================================================================
@@ -1142,6 +1143,8 @@ public OnAdminGiveWeapon(adminid)
     return 1;
 }
 =======
+=======
+>>>>>>> 8afd4de61878cea76e0123cd6036f00099ab89b8
 
 // ==================== NUEVOS COMANDOS DE ADMINISTRACIÓN ====================
 
@@ -1215,4 +1218,7 @@ CMD:afk(playerid, params[])
     
     return 1;
 }
+<<<<<<< HEAD
+>>>>>>> 8afd4de61878cea76e0123cd6036f00099ab89b8
+=======
 >>>>>>> 8afd4de61878cea76e0123cd6036f00099ab89b8
