@@ -649,8 +649,9 @@ stock ReloadWeaponFromMagazine(playerid)
     PlayerCurrentAmmo[playerid] += ammosToAdd;
     
     // IMPORTANTE: Dar el arma con la munición TOTAL (no sumar, establecer)
-    // SetPlayerAmmo primero para limpiar, luego dar con la cantidad correcta
-    SetPlayerAmmo(playerid, WEAPON:WeaponData[weaponIdx][wSAMPID], PlayerCurrentAmmo[playerid]);
+    // Primero resetear todas las armas, luego dar la correcta con munición
+    ResetPlayerWeapons(playerid);
+    GivePlayerWeapon(playerid, WEAPON:WeaponData[weaponIdx][wSAMPID], PlayerCurrentAmmo[playerid]);
     SetPlayerArmedWeapon(playerid, WEAPON:WeaponData[weaponIdx][wSAMPID]);
     
     // Actualizar metadata del arma con la nueva munición
@@ -668,6 +669,9 @@ stock ReloadWeaponFromMagazine(playerid)
         
         // Actualizar en memoria también
         format(PlayerInventory[playerid][weaponSlot][invMetadata], 128, "%s", metadataWeapon);
+        
+        // Actualizar también la variable temporal de la mano derecha
+        format(PlayerHeldItemMetadataRight[playerid], 128, "%s", metadataWeapon);
         
         printf("[Weapon] Actualizando metadata del arma en slot %d con %d balas", weaponSlot, PlayerCurrentAmmo[playerid]);
     }
@@ -706,6 +710,9 @@ stock ReloadWeaponFromMagazine(playerid)
     new string[128];
     format(string, sizeof(string), "{00FF00}Recargado: {FFFFFF}%s {00FF00}+%d balas (%d/%d)", WeaponData[weaponIdx][wName], ammosToAdd, PlayerCurrentAmmo[playerid], WeaponData[weaponIdx][wAmmoCapacity]);
     SendClientMessage(playerid, COLOR_SUCCESS, string);
+    
+    // Refrescar inventario para mostrar los cambios inmediatamente
+    ShowInventoryDialog(playerid);
     
     ApplyAnimation(playerid, "COLT45", "colt45_reload", 4.1, false, false, false, false, 0);
     
@@ -864,9 +871,12 @@ CMD:dararma(playerid, params[])
             quantity, WeaponData[weaponIdx][wName], CharacterData[targetid][cName]);
         SendClientMessage(playerid, COLOR_SUCCESS, string);
         
-        format(string, sizeof(string), "{00FF00}Has recibido {FFFFFF}%d x %s {00FF00}de un administrador",
-            quantity, WeaponData[weaponIdx][wName]);
+        format(string, sizeof(string), "{00FF00}Has recibido {FFFFFF}%s",
+            WeaponData[weaponIdx][wName]);
         SendClientMessage(targetid, COLOR_SUCCESS, string);
+        
+        // Refrescar inventario para mostrar el item inmediatamente
+        ShowInventoryDialog(targetid);
         
         printf("[Admin] %s dio %d x %s a %s", 
             CharacterData[playerid][cName], quantity, WeaponData[weaponIdx][wName], CharacterData[targetid][cName]);
@@ -931,9 +941,12 @@ CMD:darcargador(playerid, params[])
             quantity, MagazineData[magIdx][mName], CharacterData[targetid][cName]);
         SendClientMessage(playerid, COLOR_SUCCESS, string);
         
-        format(string, sizeof(string), "{00FF00}Has recibido {FFFFFF}%d x %s {00FF00}de un administrador",
-            quantity, MagazineData[magIdx][mName]);
+        format(string, sizeof(string), "{00FF00}Has recibido {FFFFFF}%s (%d balas)",
+            MagazineData[magIdx][mName], quantity);
         SendClientMessage(targetid, COLOR_SUCCESS, string);
+        
+        // Refrescar inventario para mostrar el item inmediatamente
+        ShowInventoryDialog(targetid);
         
         printf("[Admin] %s dio %d x %s a %s", 
             CharacterData[playerid][cName], quantity, MagazineData[magIdx][mName], CharacterData[targetid][cName]);
